@@ -1,1 +1,2 @@
 # League-of-Legends-Draft-MCTS
+This is a personal project in which I will be assembling a dataset of high elo League of Legends games using Riot Games' API. I will then use this data to train a model (GBDT or NN) to assign a win probability to each team in a League of Legends game, based on the champions they have selected. Finally, I will apply the model to rollouts of a Monte Carlo Tree Search as a reward function, in order to determine the best pick/ban at each stage of a League of Legends draft.

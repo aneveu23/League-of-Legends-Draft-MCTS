@@ -2,12 +2,13 @@ import requests
 import sqlite3
 import time
 
-api = "RGAPI-3abcd13d-08e7-4a0f-921d-dcb7d7399088"
+api = "RGAPI-642a3a40-ea80-4a19-9348-177de2e8484b"
 
 
-def get_league(api, region, league, tier=False):
+def get_league(api, region, league, tier=False, page = 1):
     """
     Get all players satisfying certain parameters.
+    :param page: If sub-master, Riot's "page" of the tier to access
     :param api: the user's API key
     :param region: the region for which to get player data
     :param league: the league for which to get player data
@@ -16,9 +17,10 @@ def get_league(api, region, league, tier=False):
              ELSE   : List of LeagueItemDTO objects, which contain summonerId unique to region
     """
     if tier:
-        URL = f"https://{region}.api.riotgames.com/lol/league/v4/entries/RANKED_SOLO_5x5/{league}/{tier}?api_key={api}"
+        URL = f"https://{region}.api.riotgames.com/lol/league/v4/entries/RANKED_SOLO_5x5/{league}/{tier}?page={page}&api_key={api}"
         response = requests.get(URL)
-        data = response.json()y
+        data = response.json()
+        print(data)
         return data
     else:
         URL = f"https://{region}.api.riotgames.com/lol/league/v4/{league}leagues/by-queue/RANKED_SOLO_5x5?api_key={api}"
@@ -34,11 +36,18 @@ def create_table(region):
                     summonerid TEXT PRIMARY KEY)''')
     conn.commit()
     conn.close()
-
+def create_matches_table():
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    c.execute(f'''CREATE TABLE IF NOT EXISTS matches (
+                    matchId TEXT PRIMARY KEY)''')
+    conn.commit()
+    conn.close()
 
 regions = ["na1", "euw1", "kr"]
-for i in regions:
-    create_table(i)
+#create_matches_table()
+#for i in regions:
+    #create_table(i)
 
 
 def insert_summoner(c, region, entry):
@@ -52,7 +61,7 @@ def insert_summoner(c, region, entry):
 
 
 leagues = ["challenger", "grandmaster", "master"]
-
+tiers = ["I", "II"]
 
 def insert_leagues(api):
     conn = sqlite3.connect('database.db')
@@ -61,27 +70,38 @@ def insert_leagues(api):
         for league in leagues:
             for entry in get_league(api, region, league):
                 insert_summoner(c, region, entry)
+        for tier in tiers:
+            page_counter = 1
+            while True:
+                league_set = get_league(api, region, "DIAMOND", tier, page_counter)
+                time.sleep(5/6)
+                if len(league_set) == 0:
+                    break
+                for entry in league_set:
+                    insert_summoner(c, region, entry)
+                page_counter += 1
     conn.commit()
     conn.close()
 
 
-insert_leagues(api)
+#insert_leagues(api)
 
 
-def add_column_to_table(column_name, column_type):
+def add_column_to_table(column_name, column_type, region):
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
-    c.execute(f"ALTER TABLE league_entries ADD COLUMN {column_name} {column_type}")
+    c.execute(f"ALTER TABLE {region}_summoners ADD COLUMN {column_name} {column_type}")
     conn.commit()
     conn.close()
 
 
-# Call the function to add a new column
-# add_column_to_table("puuid", "TEXT")
+# Call the function to add a new columns
+#for region in regions:
+    #add_column_to_table("puuid", "TEXT", region)
 
 
-def fetch_summoner_puuid(api, summoner_id):
-    url = f"https://na1.api.riotgames.com/lol/summoner/v4/summoners/{summoner_id}?api_key={api}"
+def fetch_summoner_puuid(api, region, summoner_id):
+    url = f"https://{region}.api.riotgames.com/lol/summoner/v4/summoners/{summoner_id}?api_key={api}"
     response = requests.get(url)
     if response.status_code == 200:
         data = response.json()
@@ -91,23 +111,24 @@ def fetch_summoner_puuid(api, summoner_id):
         return None
 
 
-def update_puuids(api, n):
+def update_puuids(api, region, n):
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
 
     # Fetch the first 100 rows with a null value in the 'puuid' column
-    c.execute(f"SELECT summonerId FROM league_entries WHERE puuid IS NULL LIMIT {n}")
+    c.execute(f"SELECT summonerId FROM {region}_summoners WHERE puuid IS NULL LIMIT {n}")
     summoner_ids = c.fetchall()
 
     for summoner_id in summoner_ids:
         print(time.perf_counter())
-        summoner_id = summoner_id[0]  # Unpack the tuple
-        puuid = fetch_summoner_puuid(api, summoner_id)
-        time.sleep(1)
+        puuid = fetch_summoner_puuid(api, region, summoner_id[0])
+        time.sleep(5/6)
 
         if puuid is not None:
-            c.execute("UPDATE league_entries SET puuid = ? WHERE summonerId = ?", (puuid, summoner_id))
+            c.execute(f"UPDATE {region}_summoners SET puuid = ? WHERE summonerId = ?", (puuid, summoner_id))
             conn.commit()
     conn.close()
 
-# update_puuids(api, 100)
+
+#for region in regions:
+    #update_puuids(api, region, 300)

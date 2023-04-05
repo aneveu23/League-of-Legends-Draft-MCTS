@@ -2,7 +2,7 @@ import requests
 import sqlite3
 import time
 
-api = "RGAPI-642a3a40-ea80-4a19-9348-177de2e8484b"
+api = "RGAPI-5656cd1f-4deb-455b-a5dc-e1bf62cf1607"
 
 
 def get_league(api, region, league, tier=False, page = 1):
@@ -36,6 +36,8 @@ def create_table(region):
                     summonerid TEXT PRIMARY KEY)''')
     conn.commit()
     conn.close()
+
+
 def create_matches_table():
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
@@ -111,24 +113,23 @@ def fetch_summoner_puuid(api, region, summoner_id):
         return None
 
 
-def update_puuids(api, region, n):
+def update_puuids(api, region):
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
 
     # Fetch the first 100 rows with a null value in the 'puuid' column
-    c.execute(f"SELECT summonerId FROM {region}_summoners WHERE puuid IS NULL LIMIT {n}")
+    c.execute(f"SELECT summonerId FROM {region}_summoners WHERE puuid IS NULL")
     summoner_ids = c.fetchall()
 
     for summoner_id in summoner_ids:
-        print(time.perf_counter())
         puuid = fetch_summoner_puuid(api, region, summoner_id[0])
-        time.sleep(5/6)
-
+        print(puuid)
+        time.sleep(1)
         if puuid is not None:
-            c.execute(f"UPDATE {region}_summoners SET puuid = ? WHERE summonerId = ?", (puuid, summoner_id))
+            c.execute(f"UPDATE {region}_summoners SET puuid = ? WHERE summonerId = ?", (puuid, summoner_id[0]))
             conn.commit()
     conn.close()
 
 
 #for region in regions:
-    #update_puuids(api, region, 300)
+update_puuids(api, "na1")

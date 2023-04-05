@@ -2,9 +2,9 @@ import requests
 import sqlite3
 import time
 
-api = api = "RGAPI-642a3a40-ea80-4a19-9348-177de2e8484b"
+api = api = "RGAPI-5656cd1f-4deb-455b-a5dc-e1bf62cf1607"
 start_time = "1679468400"
-puuid = "2J-I1Sj_XVRL94Jfy1qqOAAlkUm0vuIWzedqZWrPPSGwU6QpnNggX6-ejmUqfDWlrjOgp2rCsMwqKA"
+#puuid = "2J-I1Sj_XVRL94Jfy1qqOAAlkUm0vuIWzedqZWrPPSGwU6QpnNggX6-ejmUqfDWlrjOgp2rCsMwqKA"
 
 
 def fetch_matches_from_puuid(api, region, puuid, starttime):
@@ -32,7 +32,7 @@ def parse_regiontable_puuids(region1, region2):
         for matchid in fetch_matches_from_puuid(api, region2, value[0], start_time):
             insert_matchid(c, matchid)
             conn.commit()
-        time.sleep(5 / 6)
+        time.sleep(1)
     conn.close()
 
 
